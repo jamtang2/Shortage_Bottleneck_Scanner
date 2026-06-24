@@ -216,7 +216,7 @@ M6 is CI config, not Python — there is no `src/` module. Two non-obvious point
 
 ## Planned tech stack (PRD §8)
 
-- Python 3.11+; `requests`/`httpx`; `pandas`
+- Python 3.13+ (OpenDartReader 0.3 requires `>=3.13`; local + CI both run 3.13); `requests`/`httpx`; `pandas`
 - Finance: `pykrx`, `FinanceDataReader`, `OpenDartReader` (or raw DART API)
 - LLM SDKs: `anthropic`, `openai`, `google-genai` — all behind a proposer interface
 - Report: `Jinja2` (HTML template) + Markdown

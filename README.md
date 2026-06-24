@@ -41,7 +41,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-요구: Python 3.11+
+요구: **Python 3.13+** (OpenDartReader 0.3 이 `>=3.13` 요구. 로컬·CI 모두 3.13 사용)
 
 ## 환경변수
 
