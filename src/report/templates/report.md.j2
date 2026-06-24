@@ -1,0 +1,28 @@
+# {{ title }}
+
+**스캔 기준일** {{ scan_date }} · 최근 {{ window_days }}일 · 생성 {{ generated_at }}
+
+> ⚠️ {{ disclaimer }}
+
+**요약** — 테마 {{ n_themes }}개 · 후보 종목 {{ n_stocks }}개 · 검증 탈락 {{ n_dropped }}건(미표기)
+**기준일** — 시가총액 {{ asof_market_cap or 'N/A' }} · 재무(매출·PER) {{ asof_financials or 'N/A' }}
+
+---
+{% for t in themes %}
+## [{{ t.category }}] {{ t.keyword }}
+
+| 종목 | 시장 | 합의 | 관련도 | 시가총액 | 매출 TTM | PER(TTM) |
+|------|------|:----:|:------:|---------:|---------:|---------:|
+{% for s in t.stocks %}
+| {{ s.name }} ({{ s.code }}) | {{ s.market }} | {{ s.agreement_score }}/3 | {{ s.relevance | relevance_label }} | {{ s.market_cap_eokwon | eok }} | {{ s.revenue_ttm_eokwon | eok }} | {{ s.per_ttm | per }} |
+{% endfor %}
+{% for s in t.stocks %}
+- **{{ s.name }}**: {{ s.relation_reason }} _(제안: {{ s.proposed_by | join('·') }})_
+{% endfor %}
+{% endfor %}
+---
+
+합의(agreement) = 동일 종목을 KRX 검증 통과로 제안한 LLM 수(최대 3: Claude·GPT·Gemini).
+PER은 시가총액÷순이익 TTM이며 적자 종목은 N/A. 데이터 출처: KRX(FinanceDataReader)·OpenDART.
+
+{{ disclaimer }}

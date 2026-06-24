@@ -1,0 +1,52 @@
+# 쇼티지·병목 수혜주 스캐너 설정
+keywords: ["쇼티지", "병목", "공급부족", "증설 지연", "리드타임", "감산"]
+window_days: 7
+max_results_per_query: 30
+
+sources:
+  naver_news: true
+  consensus: false   # 한경 컨센서스 robots.txt(Disallow: /)로 자동수집 비활성화
+
+# M2(extract) — Claude 테마 추출 설정
+extract:
+  model: "claude-opus-4-8"   # 설계 규칙: 모델은 코드가 아닌 config에서 관리
+  max_articles: 200          # 입력 기사 상한(토큰/비용 안전장치)
+  max_tokens: 8000           # 응답 최대 토큰
+
+# M3(propose) — 멀티 LLM 제안자 on/off
+proposers:
+  claude: true
+  gpt: true     # OpenAI 충전 완료
+  gemini: true
+
+# M3(propose) — 모델 ID/파라미터 (코드가 아닌 config에서 관리)
+propose:
+  models:
+    claude: "claude-opus-4-8"
+    gpt: "gpt-5.5"            # 계정에서 확인된 최신 플래그십(2026-04-23), 충전 시 사용
+    gemini: "gemini-2.5-flash"  # 무료 등급에서 동작(pro는 결제 필요로 429)
+  judge_model: "claude-opus-4-8"
+  max_stocks_per_theme: 8
+  max_tokens: 4000           # thinking 모델 추론 토큰 여유분 포함
+
+top_k_per_keyword: 5
+
+# M4(enrich) — 재무지표 결합
+enrich:
+  # 시총: FinanceDataReader 스냅샷(pykrx는 KRX 로그인 장벽으로 비사용).
+  # 매출/순이익 TTM·PER: OpenDART. DART_API_KEY 없으면 시총만 채우고 degrade.
+  use_dart: true
+
+# M5(report) — HTML/Markdown 주간 리포트 (reports/{scan_date}/)
+report:
+  formats: ["html", "markdown"]   # 생성할 포맷(코드가 아닌 config에서 관리)
+  title: "쇼티지·병목 수혜주 스캐너 주간 리포트"
+  # 면책 고지는 상품 원칙이라 코드(render.DISCLAIMER)에 고정 — 설정으로 끌 수 없음.
+
+# M6(schedule) — 자동 실행 주기(사람이 읽는 의도 문서).
+# 실제 트리거는 .github/workflows/weekly-scan.yml 의 cron 이 한다(Actions 는 이 파일을
+# 동적으로 못 읽으므로, 시간을 바꾸면 cron 과 아래 값을 함께 고쳐 동기화한다).
+schedule:
+  day: "Mon"            # 주 1회 실행 요일
+  time_kst: "08:00"     # 한국시간 기준 실행 시각
+  cron_utc: "0 23 * * 0"  # 위를 UTC 로 환산한 값(일 23:00 UTC = 월 08:00 KST)

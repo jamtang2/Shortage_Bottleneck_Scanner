@@ -1,0 +1,79 @@
+name: Weekly Shortage Scan
+
+# 주 1회 자동으로 전체 파이프라인(collect→extract→propose→enrich→report)을 돌려
+# reports/{scan_date}/ 를 생성·커밋한다(M6). 수동 실행도 가능하다.
+#
+# cron 은 항상 UTC 기준 — 한국시간(KST=UTC+9)으로 환산해야 한다.
+#   기본: 매주 월요일 08:00 KST = 일요일 23:00 UTC  →  "0 23 * * 0"
+# 시간을 바꾸려면 아래 cron 과 config/settings.yaml 의 schedule 블록을 함께 고친다
+# (settings.yaml 은 사람이 읽는 의도 문서, 실제 트리거는 이 cron 이 한다).
+on:
+  schedule:
+    - cron: "0 23 * * 0"   # 일 23:00 UTC = 월 08:00 KST
+  workflow_dispatch:        # Actions 탭에서 수동 실행(첫 검증용)
+
+# 생성된 리포트를 레포에 커밋/푸시하려면 쓰기 권한이 필요하다.
+permissions:
+  contents: write
+
+# 스케줄과 수동 실행이 겹쳐 동시에 푸시하다 충돌하는 것을 막는다.
+concurrency:
+  group: weekly-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 키는 GitHub Secrets 에서 주입한다(NF6 — 코드/레포에 하드코딩 금지).
+      # 일부 키가 비어 있어도 해당 단계만 degrade 하고 파이프라인은 끝까지 돈다(NF4/NF8).
+      - name: Run pipeline (collect → extract → propose → enrich → report)
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python -m src.pipeline
+
+      # reports/ · data/ 는 로컬 개발 편의상 .gitignore 대상이라, CI 산출물 아카이브는
+      # -f(강제 추가)로 커밋한다. reports/{date}/ 는 날짜별로 쌓여 주간 히스토리가 된다.
+      - name: Commit generated reports
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f reports/ data/ || true
+          if git diff --staged --quiet; then
+            echo "변경된 산출물 없음 — 커밋 생략"
+          else
+            git commit -m "주간 스캔 리포트 자동 생성 ($(date -u +%Y-%m-%d) UTC)"
+            git push
+          fi
+
+      # 커밋과 별개로, 다운로드 가능한 워크플로 아티팩트로도 남긴다(실패해도 시도).
+      - name: Upload reports as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report
+          path: |
+            reports/
+            data/
+          if-no-files-found: ignore
+          retention-days: 90

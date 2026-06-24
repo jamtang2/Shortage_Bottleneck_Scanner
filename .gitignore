@@ -1,0 +1,19 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# intermediate artifacts & reports (keep the dirs, ignore contents)
+data/*
+!data/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# OpenDART corp-code 캐시 등 자동 재생성되는 파생물
+docs_cache/

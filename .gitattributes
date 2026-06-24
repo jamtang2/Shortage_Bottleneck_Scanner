@@ -1,0 +1,9 @@
+# 줄바꿈 정규화 — 저장소에는 LF로 저장(체크아웃 시 OS에 맞게 변환).
+# CI(Linux)와 Windows 로컬이 같은 파일을 "수정됨"으로 보지 않게 한다.
+* text=auto eol=lf
+
+# 바이너리/문서는 그대로 둔다.
+*.pdf binary
+*.pkl binary
+*.png binary
+*.jpg binary

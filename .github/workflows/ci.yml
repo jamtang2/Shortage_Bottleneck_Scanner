@@ -1,0 +1,32 @@
+name: CI
+
+# push/PR 마다 단위 테스트(58개)를 돌려 코드 건전성을 지킨다.
+# 테스트는 네트워크·LLM 을 모킹하므로 API 키 없이도 통과한다 — Secrets 불필요.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -q

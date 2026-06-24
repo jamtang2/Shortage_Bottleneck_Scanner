@@ -1,0 +1,27 @@
+# --- M1 (collect) ---
+requests>=2.31
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# --- M2 (extract) ---
+anthropic>=0.40          # Claude 테마 추출 / M3 judge
+
+# --- M3 (propose) ---
+finance-datareader>=0.9  # KRX 상장리스트 검증(환각 티커 차단)
+openai>=1.40             # GPT 제안자 (키 없으면 자동 비활성)
+google-genai>=0.3        # Gemini 제안자 (키 없으면 자동 비활성)
+
+# --- M4 (enrich) ---
+# 시총: FinanceDataReader(위 M3에서 이미 설치) Marcap 컬럼 사용.
+# pykrx는 1.2.x부터 KRX 데이터포털 로그인/봇차단으로 빈 응답 → 비사용.
+OpenDartReader>=0.3      # 매출/순이익 TTM (OpenDART 분기 재무제표)
+pandas>=2.0              # 재무 DataFrame 처리
+
+# --- M5 (report) ---
+Jinja2>=3.1              # HTML/Markdown 리포트 템플릿 렌더링
+
+# --- dev/test ---
+pytest>=8.0
+
+# --- future milestones (uncomment as you reach them) ---
+# beautifulsoup4>=4.12   # 허용된 컨센서스 대체 소스(RSS/HTML) 파싱 시
