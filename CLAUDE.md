@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-**Current milestone: M1 (collect) + M2 (extract) + M3 (propose) + M4 (enrich) + M5
-(report) + M6 (schedule) implemented.** Full design is in the PRD at
-`PRD/PRD_shortage_bottleneck_scanner.md.pdf` (Korean). Follow the PRD milestone order
-(M1→M7) and build one stage at a time, validating each stage's JSON/report artifact by
-eye before moving on — the PRD explicitly forbids implementing the whole pipeline at once.
-Next up: M7 (optional Telegram/SMTP notify after report).
+**All milestones implemented: M1 (collect) + M2 (extract) + M3 (propose) + M4 (enrich) +
+M5 (report) + M6 (schedule) + M7 (notify).** Full design is in the PRD at
+`PRD/PRD_shortage_bottleneck_scanner.md.pdf` (Korean). The build followed PRD milestone
+order (M1→M7), one stage at a time, validating each stage's JSON/report artifact by eye —
+the PRD forbids implementing the whole pipeline at once. The pipeline is feature-complete;
+further work is tuning/backlog (PRD §12), not new milestones.
 
 **M4 design deviation (pykrx → FinanceDataReader):** the PRD names pykrx for market
 cap/PER, but pykrx ≥1.2.x returns empty responses behind KRX data-portal login/bot
@@ -23,9 +23,9 @@ revenue/PER degrade to null (NF4).
 ## Commands
 
 ```bash
-pip install -r requirements.txt   # M1–M5 deps
-python -m src.pipeline            # collect → extract → propose → enrich → report; writes raw_articles/themes/candidates/enriched.json + reports/{scan_date}/
-pytest                           # all tests (58); mock network + LLM, pass without real keys
+pip install -r requirements.txt   # M1–M7 deps (notify uses requests + stdlib smtplib; no new dep)
+python -m src.pipeline            # collect → extract → propose → enrich → report → notify; writes raw_articles/themes/candidates/enriched.json + reports/{scan_date}/
+pytest                           # all tests (68); mock network + LLM, pass without real keys
 pytest tests/test_collect.py::test_dedup_and_sort   # run a single test
 ```
 
@@ -33,8 +33,10 @@ M1 needs `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET`; M2 + the M3 judge need
 `ANTHROPIC_API_KEY`; M3's GPT/Gemini proposers need `OPENAI_API_KEY` / `GOOGLE_API_KEY`
 (absent key → that proposer is skipped, ensemble degrades). M4's market cap needs no key
 (FDR); its revenue/PER need `DART_API_KEY` (absent → market cap still fills, revenue/PER
-null). M5 (report) needs no key. Copy `.env.example`. Each stage logs-and-skips on failure
-instead of crashing — a later stage failing never discards an earlier stage's artifact.
+null). M5 (report) needs no key. M7 (notify) is off by default; enabling a channel needs
+`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` or `SMTP_*` (absent → that channel is skipped).
+Copy `.env.example`. Each stage logs-and-skips on failure instead of crashing — a later
+stage failing never discards an earlier stage's artifact.
 
 To re-run one stage from its input JSON (module-independence rule), call its stage fn,
 e.g. `python -c "from dotenv import load_dotenv; load_dotenv(); from src import pipeline as p; p.run_propose_stage(p.load_settings())"`.
@@ -43,22 +45,24 @@ e.g. `python -c "from dotenv import load_dotenv; load_dotenv(); from src import 
 
 ```
 config/settings.yaml      keywords, window_days, source on/off, extract model, proposers + propose.models, top_k
-src/pipeline.py           orchestrator — runs collect → extract → propose → enrich → report
+config/settings.yaml      keywords, window_days, source on/off, extract model, proposers, top_k, schedule, notify
+src/pipeline.py           orchestrator — runs collect → extract → propose → enrich → report → notify
 src/collect/              M1: naver_news.py, consensus.py (DISABLED — robots.txt Disallow:/), models.py, http.py
 src/extract/              M2: claude_extract.py (prompt+parse), models.py, __init__.py (run_extract)
 src/propose/              M3: proposers/ (claude/gpt/gemini behind BaseProposer), krx.py (validation), merge.py, judge.py, models.py
 src/enrich/               M4: market.py (FDR market cap), dart_financials.py (rolling TTM), models.py, __init__.py (run_enrich)
 src/report/               M5: render.py (context+format+Jinja2), templates/report.{html,md}.j2, __init__.py (run_report)
 .github/workflows/        M6: weekly-scan.yml (scheduled pipeline + commit), ci.yml (pytest on push/PR)
+src/notify/               M7: summary.py, telegram.py, email_smtp.py, models.py, __init__.py (run_notify)
 data/                     intermediate JSON artifacts (gitignored)
 reports/YYYY-MM-DD/       final reports — report.html + report.md (gitignored)
-tests/test_collect.py … test_report.py   network/LLM-mocked unit tests (58 total)
+tests/test_collect.py … test_notify.py   network/LLM-mocked unit tests (68 total)
 conftest.py               puts repo root on sys.path so `import src...` works under pytest
 ```
 
 Stage artifacts (the contract between modules): `data/raw_articles.json` (M1) →
 `themes.json` (M2) → `candidates.json` (M3) → `enriched.json` (M4) →
-`reports/YYYY-MM-DD/` (M5).
+`reports/YYYY-MM-DD/` (M5) → Telegram/email push (M7, from enriched.json + report files).
 
 ### `data/raw_articles.json` contract (M1 output → M2 input)
 
@@ -198,6 +202,29 @@ M6 is CI config, not Python — there is no `src/` module. Two non-obvious point
    accumulates; it's also uploaded as a downloadable artifact. `ci.yml` runs the mocked
    test suite on push/PR (no keys needed). **Deploying M6 is a user action** (git init →
    push to GitHub → add Secrets → Run workflow); it cannot be validated from local alone.
+
+### Notification (`[notify]` — implemented in `src/notify/`)
+
+`run_notify(context)` sends the report summary to Telegram/email **after** the report
+stage. It's optional and off by default. Non-obvious points:
+
+1. **Channels behind a uniform shape** (`telegram.py`, `email_smtp.py`). Each exposes
+   `from_env(env) → notifier | None` and a `send(...)`. New channels slot in the same way
+   (same philosophy as the M3 proposers). Telegram uses the existing `requests`
+   (sendMessage + sendDocument); SMTP uses stdlib `smtplib`/`email` — **no new dependency**.
+2. **Config + key double-gate, degrade per channel (NF4/NF6).** A channel sends only if
+   `notify.{telegram,email}` is true AND `from_env` finds its keys; otherwise it's recorded
+   in `NotifyResult.skipped` and the run continues. A channel raising is caught into
+   `.errors` — one channel never blocks the other or the pipeline. Keys come only from
+   env/Secrets.
+3. **Summary is length-bounded and carries the disclaimer** (`summary.py`). The push lists
+   each theme's top stocks (name, agreement/relevance, market cap) and truncates to stay
+   under Telegram's ~4096-char limit; the full report goes as an **attachment**. A short
+   disclaimer is always in the body (the attached report carries the full `DISCLAIMER`) —
+   the product principle holds for notifications too.
+4. **Module-independent.** `run_notify_stage` rebuilds the summary context from
+   `enriched.json` via the report's own `build_context`, locates `reports/{scan_date}/`
+   files to attach, and sends — re-runnable from artifacts alone.
 
 ## Output schemas (from PRD §6)
 

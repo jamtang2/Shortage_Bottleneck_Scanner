@@ -50,3 +50,10 @@ schedule:
   day: "Mon"            # 주 1회 실행 요일
   time_kst: "08:00"     # 한국시간 기준 실행 시각
   cron_utc: "0 23 * * 0"  # 위를 UTC 로 환산한 값(일 23:00 UTC = 월 08:00 KST)
+
+# M7(notify) — 리포트 요약 알림(선택). 채널을 켜고 키(.env/Secrets)를 채우면 발송.
+# 키가 없으면 해당 채널만 건너뛴다(degrade). 면책 고지는 알림에도 항상 포함.
+notify:
+  telegram: false        # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 필요
+  email: false           # SMTP_HOST/PORT/USER/PASSWORD/FROM/TO 필요
+  attach_report: true    # report.html·report.md 를 첨부로 함께 발송

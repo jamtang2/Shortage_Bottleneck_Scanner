@@ -22,6 +22,7 @@ from src.collect import (
 )
 from src.enrich import EnrichError, run_enrich, write_enriched
 from src.extract import ExtractError, run_extract, write_themes
+from src.notify import build_notify_context, run_notify
 from src.propose import ProposeError, run_propose, write_candidates
 from src.report import ReportError, run_report
 
@@ -168,6 +169,38 @@ def run_report_stage(
     return True
 
 
+def run_notify_stage(
+    settings: dict,
+    enriched_path: Path = ENRICHED_PATH,
+    reports_dir: Path = REPORTS_DIR,
+) -> bool:
+    """enriched.json + 리포트 파일 → 텔레그램/이메일 발송. 실패해도 중단하지 않는다(NF4).
+
+    enriched.json 만 있으면 요약을 재구성해 단독 재실행 가능(모듈 독립).
+    """
+    if not enriched_path.exists():
+        logger.warning("M7 건너뜀: %s 가 없습니다(먼저 enrich/report 실행).", enriched_path)
+        return False
+    with open(enriched_path, "r", encoding="utf-8") as f:
+        enriched = json.load(f)
+
+    from datetime import datetime
+
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    context = build_notify_context(enriched, generated_at=generated_at, settings=settings)
+
+    scan_date = enriched.get("scan_date") or generated_at[:10]
+    out_dir = reports_dir / scan_date
+    report_files = [p for p in (out_dir / "report.html", out_dir / "report.md") if p.exists()]
+
+    result = run_notify(context, settings=settings, report_files=report_files)
+    if result.sent:
+        logger.info("알림 발송 완료: %s", ", ".join(result.sent))
+    if result.errors:
+        logger.warning("알림 발송 실패: %s", result.errors)
+    return bool(result.sent)
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -193,6 +226,9 @@ def main() -> None:
 
     # M5 report — enriched.json → reports/{scan_date}/ (Jinja2 HTML + Markdown)
     run_report_stage(settings)
+
+    # M7 notify — 리포트 요약을 텔레그램/이메일로 발송(선택; 키·설정 없으면 생략)
+    run_notify_stage(settings)
 
 
 if __name__ == "__main__":
