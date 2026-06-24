@@ -55,5 +55,5 @@ schedule:
 # 키가 없으면 해당 채널만 건너뛴다(degrade). 면책 고지는 알림에도 항상 포함.
 notify:
   telegram: false        # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 필요
-  email: false           # SMTP_HOST/PORT/USER/PASSWORD/FROM/TO 필요
+  email: true            # SMTP_HOST/PORT/USER/PASSWORD/FROM/TO 필요(GitHub Secrets). 키 없으면 자동 건너뜀
   attach_report: true    # report.html·report.md 를 첨부로 함께 발송
