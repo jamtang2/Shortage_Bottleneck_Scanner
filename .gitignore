@@ -14,6 +14,9 @@ data/*
 !data/.gitkeep
 reports/*
 !reports/.gitkeep
+# 대시보드 인덱스는 항상 추적·커밋한다(GitHub Pages 목록 페이지).
+# 날짜별 리포트 폴더는 CI 가 git add -f 로 강제 커밋한다.
+!reports/index.html
 
 # OpenDART corp-code 캐시 등 자동 재생성되는 파생물
 docs_cache/
