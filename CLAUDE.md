@@ -46,17 +46,18 @@ e.g. `python -c "from dotenv import load_dotenv; load_dotenv(); from src import 
 ```
 config/settings.yaml      keywords, window_days, source on/off, extract model, proposers + propose.models, top_k
 config/settings.yaml      keywords, window_days, source on/off, extract model, proposers, top_k, schedule, notify
-src/pipeline.py           orchestrator — runs collect → extract → propose → enrich → report → notify
+src/pipeline.py           orchestrator — runs collect → extract → propose → enrich → report → dashboard → notify
 src/collect/              M1: naver_news.py, consensus.py (DISABLED — robots.txt Disallow:/), models.py, http.py
 src/extract/              M2: claude_extract.py (prompt+parse), models.py, __init__.py (run_extract)
 src/propose/              M3: proposers/ (claude/gpt/gemini behind BaseProposer), krx.py (validation), merge.py, judge.py, models.py
 src/enrich/               M4: market.py (FDR market cap), dart_financials.py (rolling TTM), models.py, __init__.py (run_enrich)
-src/report/               M5: render.py (context+format+Jinja2), templates/report.{html,md}.j2, __init__.py (run_report)
+src/report/               M5: render.py (context+format+Jinja2), templates/report.{html,md}.j2, __init__.py (run_report + summary.json); dashboard.py + templates/dashboard.html.j2 (web dashboard backlog)
 .github/workflows/        M6: weekly-scan.yml (scheduled pipeline + commit), ci.yml (pytest on push/PR)
 src/notify/               M7: summary.py, telegram.py, email_smtp.py, models.py, __init__.py (run_notify)
 data/                     intermediate JSON artifacts (gitignored)
-reports/YYYY-MM-DD/       final reports — report.html + report.md (gitignored)
-tests/test_collect.py … test_notify.py   network/LLM-mocked unit tests (68 total)
+reports/YYYY-MM-DD/       final reports — report.html + report.md + summary.json (gitignored)
+reports/index.html        web dashboard — built across all weeks (gitignored locally, committed by CI)
+tests/test_collect.py … test_notify.py   network/LLM-mocked unit tests (72 total)
 conftest.py               puts repo root on sys.path so `import src...` works under pytest
 ```
 
@@ -183,6 +184,26 @@ returns an `EnrichedResult`. All amounts are **억원** (1e8 KRW). Non-obvious p
 4. **Config-driven formats** (`config.report.formats`, default `["html","markdown"]`);
    output dir is keyed by `scan_date` so re-runs overwrite the same day's folder
    (reproducibility). Render failure raises `ReportError`, which the pipeline logs/skips.
+5. **`run_report` also writes `summary.json`** next to the report (scan_date, counts,
+   per-theme top-3 names) — a small, stable contract the web dashboard reads instead of
+   re-parsing HTML.
+
+### Web dashboard (`[dashboard]` — PRD §12 backlog, implemented in `src/report/dashboard.py`)
+
+`build_dashboard(reports_dir)` builds one static `reports/index.html` across **all** weeks
+(no server). `run_dashboard_stage` runs right after the report stage. Non-obvious points:
+
+1. **summary.json is the contract; degrade to a bare link if absent.** `_load_week` reads
+   each `reports/{scan_date}/summary.json` for stats/theme chips; a folder with `report.html`
+   but no summary (older weeks) still appears with just a clickable link (`href` is the
+   **relative** `{scan_date}/report.html`, so it works under GitHub Pages or local `file://`).
+   A folder without `report.html` is skipped entirely. Weeks sort `scan_date` descending.
+2. **Disclaimer holds here too** — it's rendered as a banner and footer (reuses
+   `render.DISCLAIMER`); the dashboard is screening-hypothesis navigation, not advice.
+3. **CI publishes it.** `index.html` is gitignored locally but `weekly-scan.yml`'s
+   `git add -f reports/` commits it each week; enabling GitHub Pages (Settings → Pages →
+   Deploy from `main` / root) serves `…/reports/`. Build failure is caught and logged — it
+   never aborts the run (NF4).
 
 ### Scheduling (`[schedule]` — implemented in `.github/workflows/`)
 
@@ -197,9 +218,10 @@ M6 is CI config, not Python — there is no `src/` module. Two non-obvious point
 2. **Secrets via GitHub Secrets, artifacts committed back.** All six API keys are injected
    from repo Secrets as env vars (NF6 — never in code/repo); missing keys degrade per
    stage (NF4/NF8), so a partial secret set still produces a report. After the run, the
-   step force-adds (`git add -f`) `reports/` + `data/` — they're gitignored for local-dev
-   cleanliness, but CI commits the dated `reports/{scan_date}/` so a weekly history
-   accumulates; it's also uploaded as a downloadable artifact. `ci.yml` runs the mocked
+   step force-adds (`git add -f`) `reports/` (including the dashboard's `index.html`) —
+   gitignored for local-dev cleanliness, but CI commits the dated `reports/{scan_date}/`
+   so a weekly history accumulates. `data/` is **not** committed (commit noise); both
+   `reports/` and `data/` are also uploaded as downloadable artifacts. `ci.yml` runs the mocked
    test suite on push/PR (no keys needed). **Deploying M6 is a user action** (git init →
    push to GitHub → add Secrets → Run workflow); it cannot be validated from local alone.
 

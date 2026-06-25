@@ -25,6 +25,7 @@ from src.extract import ExtractError, run_extract, write_themes
 from src.notify import build_notify_context, run_notify
 from src.propose import ProposeError, run_propose, write_candidates
 from src.report import ReportError, run_report
+from src.report.dashboard import build_dashboard
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,22 @@ def run_report_stage(
     return True
 
 
+def run_dashboard_stage(
+    settings: dict,
+    reports_dir: Path = REPORTS_DIR,
+) -> bool:
+    """reports/*/ → reports/index.html(주차별 열람 대시보드). 실패해도 중단하지 않는다(NF4)."""
+    try:
+        out = build_dashboard(reports_dir, settings=settings)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("대시보드 생성 실패 — 건너뜀: %s", e)
+        return False
+    if out is None:
+        return False
+    logger.info("대시보드 저장 완료: %s", out)
+    return True
+
+
 def run_notify_stage(
     settings: dict,
     enriched_path: Path = ENRICHED_PATH,
@@ -226,6 +243,9 @@ def main() -> None:
 
     # M5 report — enriched.json → reports/{scan_date}/ (Jinja2 HTML + Markdown)
     run_report_stage(settings)
+
+    # 대시보드 — reports/*/ → reports/index.html (주차별 열람, GitHub Pages용)
+    run_dashboard_stage(settings)
 
     # M7 notify — 리포트 요약을 텔레그램/이메일로 발송(선택; 키·설정 없으면 생략)
     run_notify_stage(settings)

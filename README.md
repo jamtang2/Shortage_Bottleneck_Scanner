@@ -139,6 +139,24 @@ notify:
 - `enriched.json`만 있으면 알림 단계를 단독 재실행할 수 있습니다:
   `python -c "from src import pipeline as p; p.run_notify_stage(p.load_settings())"`
 
+## 웹 대시보드(주차별 리포트 열람)
+
+매주 쌓이는 `reports/{scan_date}/` 리포트를 브라우저에서 한눈에 훑어보는 정적
+대시보드입니다(PRD §12 백로그). 파이프라인이 리포트 직후 `reports/index.html`을
+생성하며, 각 주차 카드를 누르면 그 주의 `report.html`이 열립니다.
+
+- 별도 서버가 필요 없습니다. M5가 리포트와 함께 남기는 `summary.json`에서 주차별
+  테마·종목 수와 테마 칩을 읽고, `summary.json`이 없는 과거 주차는 링크만으로
+  degrade해 목록에 싣습니다. 대시보드에도 **면책 고지가 항상 포함**됩니다.
+- 로컬에서는 `reports/index.html`을 브라우저로 열면 됩니다. 단독 재생성:
+  `python -c "from src import pipeline as p; p.run_dashboard_stage(p.load_settings())"`
+- **GitHub Pages로 공개 열람**(선택): 저장소 → Settings → Pages → *Build and
+  deployment*을 **Deploy from a branch**, 브랜치 `main` / 폴더 `/ (root)`로 설정하면
+  `https://<사용자>.github.io/<저장소>/reports/`에서 열립니다. CI가 매주 리포트와 함께
+  `reports/index.html`을 커밋하므로 자동으로 갱신됩니다. (private 저장소 Pages는
+  플랜에 따라 제한될 수 있습니다.)
+
 ## 상태
 
 **M1~M7 전 단계 구현 완료** — 수집·추출·제안·재무·리포트·스케줄·알림.
+추가로 PRD §12 백로그의 **웹 대시보드**(주차별 리포트 열람) 구현.

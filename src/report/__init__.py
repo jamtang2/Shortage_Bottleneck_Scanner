@@ -86,6 +86,15 @@ def run_report(
             path = out_dir / filename
             path.write_text(renderer(context), encoding="utf-8")
             written.append(path)
+
+        # 대시보드(주차별 열람)용 메타데이터. 본 리포트와 한 폴더에 두어
+        # build_dashboard 가 주를 가로질러 모은다.
+        summary_path = out_dir / "summary.json"
+        summary_path.write_text(
+            json.dumps(_summary(context), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        written.append(summary_path)
     except Exception as e:  # noqa: BLE001
         raise ReportError(f"리포트 렌더 실패: {e}") from e
 
@@ -94,6 +103,25 @@ def run_report(
         out_dir, ", ".join(formats), context["n_themes"], context["n_stocks"],
     )
     return ReportResult(out_dir=out_dir, files=written, context=context)
+
+
+def _summary(context: dict) -> dict:
+    """대시보드 인덱스용 주별 요약 메타(작고 안정적인 필드만)."""
+    return {
+        "scan_date": context.get("scan_date", ""),
+        "generated_at": context.get("generated_at", ""),
+        "window_days": context.get("window_days", 7),
+        "n_themes": context.get("n_themes", 0),
+        "n_stocks": context.get("n_stocks", 0),
+        "themes": [
+            {
+                "keyword": t.get("keyword", ""),
+                "category": t.get("category", ""),
+                "top": [s.get("name", "") for s in t.get("stocks", [])[:3]],
+            }
+            for t in context.get("themes", [])
+        ],
+    }
 
 
 def load_enriched(path) -> dict:

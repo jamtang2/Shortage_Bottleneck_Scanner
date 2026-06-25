@@ -118,7 +118,9 @@ def test_run_report_writes_files(tmp_path):
     html = out / "report.html"
     md = out / "report.md"
     assert html.exists() and md.exists()
-    assert {p.name for p in res.files} == {"report.html", "report.md"}
+    # report.html/md 외에 대시보드용 summary.json 도 항상 함께 기록된다.
+    assert {p.name for p in res.files} == {"report.html", "report.md", "summary.json"}
+    assert (out / "summary.json").exists()
     assert DISCLAIMER in html.read_text(encoding="utf-8")
 
 
@@ -127,7 +129,7 @@ def test_run_report_respects_formats(tmp_path):
         ENRICHED, out_dir=tmp_path, generated_at="2026-06-23 09:00",
         formats=["markdown"],
     )
-    assert {p.name for p in res.files} == {"report.md"}
+    assert {p.name for p in res.files} == {"report.md", "summary.json"}
     assert not (tmp_path / "report.html").exists()
 
 

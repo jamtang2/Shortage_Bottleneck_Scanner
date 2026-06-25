@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} — 주간 리포트 대시보드</title>
+<style>
+  :root { --bg:#0f1116; --card:#171a21; --line:#2a2f3a; --fg:#e7eaf0;
+          --muted:#9aa3b2; --accent:#5b9dff; --warn:#ffb454; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family:"Segoe UI","Malgun Gothic",system-ui,sans-serif; line-height:1.55; }
+  .wrap { max-width:980px; margin:0 auto; padding:32px 20px 64px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:.9rem; margin-bottom:18px; }
+  .disclaimer { background:#2a210f; border:1px solid var(--warn); color:#ffe6bf;
+                border-radius:10px; padding:12px 16px; font-size:.84rem; margin:16px 0 26px; }
+  .week { display:block; text-decoration:none; color:inherit;
+          background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:16px 20px; margin-bottom:14px; transition:border-color .15s; }
+  .week:hover { border-color:var(--accent); }
+  .week .row { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .date { font-size:1.15rem; font-weight:700; }
+  .latest { font-size:.7rem; color:var(--accent); border:1px solid var(--accent);
+            border-radius:999px; padding:1px 8px; }
+  .counts { color:var(--muted); font-size:.85rem; }
+  .gen { color:var(--muted); font-size:.74rem; margin-left:auto; }
+  .themes { color:#cdd3de; font-size:.82rem; margin-top:8px; }
+  .chip { display:inline-block; background:#1f2430; border:1px solid var(--line);
+          border-radius:6px; padding:1px 8px; margin:3px 4px 0 0; font-size:.76rem; }
+  .more { color:var(--muted); font-size:.76rem; }
+  footer { color:var(--muted); font-size:.78rem; margin-top:30px;
+           border-top:1px solid var(--line); padding-top:14px; }
+  a.mdlink { color:var(--accent); font-size:.74rem; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>{{ title }}</h1>
+  <div class="sub">주간 리포트 대시보드 · 총 {{ n_weeks }}주차{% if latest %} · 최신 {{ latest.scan_date }}{% endif %}</div>
+
+  <div class="disclaimer">⚠️ {{ disclaimer }}</div>
+
+  {% for w in weeks %}
+  <a class="week" href="{{ w.href }}">
+    <div class="row">
+      <span class="date">{{ w.scan_date }}</span>
+      {% if loop.first %}<span class="latest">최신</span>{% endif %}
+      <span class="counts">
+        {% if w.n_themes is not none %}테마 {{ w.n_themes }} · 종목 {{ w.n_stocks }}{% else %}리포트 보기{% endif %}
+      </span>
+      {% if w.generated_at %}<span class="gen">생성 {{ w.generated_at }}</span>{% endif %}
+    </div>
+    {% if w.themes %}
+    <div class="themes">
+      {% for t in w.themes[:6] %}<span class="chip">{{ t.keyword }}</span>{% endfor %}
+      {% if w.themes|length > 6 %}<span class="more">+{{ w.themes|length - 6 }}</span>{% endif %}
+    </div>
+    {% endif %}
+  </a>
+  {% endfor %}
+
+  <footer>
+    각 카드를 누르면 해당 주차의 상세 리포트(report.html)가 열립니다.
+    데이터 출처: KRX(FinanceDataReader)·OpenDART.<br>
+    {{ disclaimer }}
+  </footer>
+</div>
+</body>
+</html>
