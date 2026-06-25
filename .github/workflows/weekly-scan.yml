@@ -4,12 +4,12 @@ name: Weekly Shortage Scan
 # reports/{scan_date}/ 를 생성·커밋한다(M6). 수동 실행도 가능하다.
 #
 # cron 은 항상 UTC 기준 — 한국시간(KST=UTC+9)으로 환산해야 한다.
-#   기본: 매주 월요일 08:00 KST = 일요일 23:00 UTC  →  "0 23 * * 0"
+#   기본: 매주 일요일 08:00 KST = 토요일 23:00 UTC  →  "0 23 * * 6"
 # 시간을 바꾸려면 아래 cron 과 config/settings.yaml 의 schedule 블록을 함께 고친다
 # (settings.yaml 은 사람이 읽는 의도 문서, 실제 트리거는 이 cron 이 한다).
 on:
   schedule:
-    - cron: "0 23 * * 0"   # 일 23:00 UTC = 월 08:00 KST
+    - cron: "0 23 * * 6"   # 토 23:00 UTC = 일 08:00 KST
   workflow_dispatch:        # Actions 탭에서 수동 실행(첫 검증용)
 
 # 생성된 리포트를 레포에 커밋/푸시하려면 쓰기 권한이 필요하다.
