@@ -27,6 +27,8 @@ ENRICHED = {
             "name": "SK하이닉스", "code": "000660", "market": "KOSPI",
             "proposed_by": ["claude", "gpt", "gemini"], "agreement_score": 3,
             "relation_reason": "HBM 글로벌 1위.", "relevance": "high",
+            "sources": [{"title": "HBM 공급 부족 심화", "url": "https://news.example/hbm",
+                         "date": "2026-06-10", "publisher": "한경"}],
             "market_cap_eokwon": 19699093.4, "revenue_ttm_eokwon": 1320838.2,
             "net_income_ttm_eokwon": 751856.2, "per_ttm": 26.2,
             "per_quarterly_annualized": 12.2,
@@ -87,6 +89,14 @@ def test_build_context_groups_and_sorts():
     # data_asof 집계
     assert ctx["asof_market_cap"] == "2026-06-19"
     assert ctx["asof_financials"] == "2026-03-31"
+    # 테마의 근거 기사(citations)가 버킷에 승계돼야 한다
+    assert hbm[0]  # sanity: HBM 테마 종목 존재
+    assert ctx["themes"][0]["sources"] == [
+        {"title": "HBM 공급 부족 심화", "url": "https://news.example/hbm",
+         "date": "2026-06-10", "publisher": "한경"}
+    ]
+    # 근거 기사가 없는 테마는 빈 리스트로 degrade(크래시 없음)
+    assert ctx["themes"][1]["sources"] == []
 
 
 # --- 렌더(면책 고지 필수) ----------------------------------------------------
@@ -99,6 +109,9 @@ def test_html_contains_disclaimer_and_data():
     assert "1,969.9조원" in html                    # 억원 포맷 적용
     assert "26.2배" in html                         # PER 포맷
     assert "N/A" in html                            # 적자 종목 PER N/A
+    assert "근거:" in html                          # 출처(citations) 섹션
+    assert 'href="https://news.example/hbm"' in html
+    assert "HBM 공급 부족 심화" in html and "한경" in html and "2026-06-10" in html
 
 
 def test_markdown_contains_disclaimer_and_table():
@@ -108,6 +121,8 @@ def test_markdown_contains_disclaimer_and_table():
     assert "## [반도체] HBM 공급부족" in md
     assert "| SK하이닉스 (000660) |" in md
     assert "롯데케미칼" in md and "N/A" in md       # 적자 종목도 표에 들어감
+    assert "**근거:**" in md
+    assert "[HBM 공급 부족 심화](https://news.example/hbm) (한경, 2026-06-10)" in md
 
 
 # --- run_report 통합(tmp 출력) ----------------------------------------------

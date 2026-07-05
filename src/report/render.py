@@ -86,7 +86,12 @@ def build_context(
         kw = s.get("keyword", "")
         bucket = index.get(kw)
         if bucket is None:
-            bucket = {"keyword": kw, "category": s.get("category", ""), "stocks": []}
+            bucket = {
+                "keyword": kw,
+                "category": s.get("category", ""),
+                "sources": s.get("sources") or [],
+                "stocks": [],
+            }
             index[kw] = bucket
             themes.append(bucket)
         bucket["stocks"].append(s)

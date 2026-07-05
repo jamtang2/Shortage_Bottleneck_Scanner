@@ -26,6 +26,7 @@ class EnrichedStock:
     agreement_score: int
     relation_reason: str
     relevance: str
+    sources: List[dict] = field(default_factory=list)  # 출처 테마의 근거 기사(M2 승계)
     # --- M4 재무지표(억원; 못 구하면 None) ---
     market_cap_eokwon: Optional[float] = None       # 시가총액(pykrx)
     revenue_ttm_eokwon: Optional[float] = None       # 최근 4분기 매출 합(DART)
@@ -48,6 +49,7 @@ class EnrichedStock:
             agreement_score=int(cand.get("agreement_score", 0)),
             relation_reason=cand.get("relation_reason", ""),
             relevance=cand.get("relevance", ""),
+            sources=list(cand.get("sources", []) or []),
         )
 
     def to_dict(self) -> dict:

@@ -95,6 +95,27 @@ def test_merge_dedups_by_code_and_scores_agreement():
     assert cands[1].code == "011070" and cands[1].agreement_score == 1
 
 
+def test_merge_theme_carries_sources_from_theme():
+    """테마의 근거 기사(M2 sources)가 모든 후보 종목에 그대로 승계돼야 한다."""
+    sources = [
+        {"title": "MLCC 공급 부족 심화", "url": "https://news.example/1",
+         "date": "2026-06-10", "publisher": "한경"},
+    ]
+    theme = {"keyword": "MLCC 공급부족", "category": "전자부품", "sources": sources}
+    validated = [
+        ValidatedProposal("claude", "009150", "삼성전기", "KOSPI", "MLCC 수혜", "high"),
+    ]
+    cands = merge_theme(theme, validated, top_k=5)
+    assert cands[0].sources == sources
+
+
+def test_merge_theme_defaults_sources_to_empty_list():
+    theme = {"keyword": "k", "category": "c"}  # sources 키 없음
+    validated = [ValidatedProposal("claude", "009150", "삼성전기", "KOSPI", "r", "high")]
+    cands = merge_theme(theme, validated, top_k=5)
+    assert cands[0].sources == []
+
+
 def test_merge_same_model_twice_counts_one():
     theme = {"keyword": "k", "category": "c"}
     validated = [
@@ -140,7 +161,9 @@ def test_run_propose_end_to_end_mocked():
         "scan_date": "2026-06-16", "window_days": 7,
         "themes": [
             {"keyword": "MLCC 공급부족", "category": "전자부품", "type": "shortage",
-             "evidence": "AI 서버 MLCC 쇼티지"},
+             "evidence": "AI 서버 MLCC 쇼티지",
+             "sources": [{"title": "AI 서버발 MLCC 품귀", "url": "https://news.example/1",
+                          "date": "2026-06-14", "publisher": "한경"}]},
         ],
     }
     fake = _FakeProposer([
@@ -157,6 +180,9 @@ def test_run_propose_end_to_end_mocked():
     c = result.candidates[0]
     assert c.code == "009150" and c.name == "삼성전기"
     assert c.relation_reason == "AI 서버 MLCC 최대 수혜" and c.relevance == "high"
+    # 테마의 근거 기사가 end-to-end로 승계돼야 한다
+    assert c.sources == [{"title": "AI 서버발 MLCC 품귀", "url": "https://news.example/1",
+                           "date": "2026-06-14", "publisher": "한경"}]
     # 환각 종목은 dropped로
     assert any(d.proposed_name == "없는전자" for d in result.dropped)
 

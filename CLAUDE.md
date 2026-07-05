@@ -176,7 +176,10 @@ returns an `EnrichedResult`. All amounts are **억원** (1e8 KRW). Non-obvious p
    Even an empty (0-candidate) report still carries it.
 2. **Grouped by theme, sorted within.** Stocks are bucketed by `keyword` in first-seen
    order (= extraction order), and within each theme sorted by `agreement_score` ↓ →
-   `relevance` (high>medium>low) → `market_cap` ↓.
+   `relevance` (high>medium>low) → `market_cap` ↓. Each bucket also carries `sources[]`
+   (from the first stock seen for that theme — all stocks under one theme share the same
+   source articles) and both templates render a "근거:" citation list under the theme's
+   table; a theme with no sources simply omits the block (degrade, not crash).
 3. **Two number filters unify formatting** (`eok`, `per`). 억원 ≥ 1조 renders as "N.N조원",
    else "N,NNN억원"; PER as "N.N배"; any None → "N/A" (so adverse/loss stocks show N/A,
    not a crash). The split `data_asof` (NF7) is surfaced as distinct market-cap vs.
@@ -256,12 +259,17 @@ stage. It's optional and off by default. Non-obvious points:
 - **`candidates.json`** (M3 output) — `{ scan_date, window_days, candidates: [ stock obj ],
   dropped: [{ keyword, model, proposed_name, reason }] }`. Each **stock obj** carries the
   source theme (`keyword`, `category`) plus `{ name, code, market, proposed_by[],
-  agreement_score, relation_reason, relevance }`. Only KRX-validated stocks reach
+  agreement_score, relation_reason, relevance, sources[] }`. Only KRX-validated stocks reach
   `candidates`; hallucinated/ambiguous names go to `dropped` (transparency, never reported).
   Name matching is **strict exact** (normalized) — colloquial/old names (금호석유,
   현대두산인프라코어) are dropped by design; the proposer prompt asks for the exact listed name.
-- **enriched stock object** (M4 output, `enriched.json`) — the M3 stock obj plus
-  `market_cap_eokwon, revenue_ttm_eokwon, per_ttm, per_quarterly_annualized, data_asof`.
+  `sources` is **not** LLM-generated — `merge_theme` copies the source theme's `sources[]`
+  (the same real, source-id-anchored articles from `themes.json`) onto every candidate of
+  that theme verbatim, so the report can cite evidence without adding a new hallucination
+  surface (proposer LLMs never see or emit URLs).
+- **enriched stock object** (M4 output, `enriched.json`) — the M3 stock obj (incl.
+  `sources[]`) plus `market_cap_eokwon, revenue_ttm_eokwon, per_ttm,
+  per_quarterly_annualized, data_asof`.
 
 ## Planned tech stack (PRD §8)
 

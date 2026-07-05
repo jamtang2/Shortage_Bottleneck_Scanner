@@ -28,6 +28,7 @@ def merge_theme(
 
     keyword = theme.get("keyword", "")
     category = theme.get("category", "")
+    sources = list(theme.get("sources", []) or [])
 
     candidates: List[Candidate] = []
     for code, group in by_code.items():
@@ -47,6 +48,7 @@ def merge_theme(
                 agreement_score=len(proposed_by),
                 relation_reason=first.reason,  # judge가 덮어씀
                 relevance=best_rel,            # judge가 덮어씀
+                sources=sources,               # 출처 테마의 근거 기사(M2 승계)
             )
         )
 

@@ -44,6 +44,11 @@
   .rel-low { color:var(--muted); }
   .reason { color:#cdd3de; font-size:.83rem; }
   .by { color:var(--muted); font-size:.74rem; }
+  .sources { margin-top:14px; padding-top:10px; border-top:1px dashed var(--line);
+             font-size:.8rem; color:var(--muted); }
+  .sources .lbl { color:var(--fg); font-weight:600; margin-right:4px; }
+  .sources ul { margin:4px 0 0; padding-left:18px; }
+  .sources a { color:var(--accent); }
   footer { color:var(--muted); font-size:.78rem; margin-top:32px;
            border-top:1px solid var(--line); padding-top:14px; }
 </style>
@@ -92,6 +97,16 @@
         {% endfor %}
       </tbody>
     </table>
+    {% if t.sources %}
+    <div class="sources">
+      <span class="lbl">근거:</span>
+      <ul>
+        {% for src in t.sources %}
+        <li><a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.title }}</a> ({{ src.publisher }}, {{ src.date }})</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   </section>
   {% endfor %}
 

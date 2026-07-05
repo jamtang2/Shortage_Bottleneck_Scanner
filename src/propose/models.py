@@ -56,6 +56,7 @@ class Candidate:
     agreement_score: int              # = len(proposed_by)
     relation_reason: str              # judge가 작성한 최종 사유
     relevance: str                    # judge가 정한 최종 high|medium|low
+    sources: List[dict] = field(default_factory=list)  # 출처 테마의 근거 기사(M2 승계)
 
     def to_dict(self) -> dict:
         return asdict(self)

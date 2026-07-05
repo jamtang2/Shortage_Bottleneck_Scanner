@@ -19,6 +19,12 @@
 {% for s in t.stocks %}
 - **{{ s.name }}**: {{ s.relation_reason }} _(제안: {{ s.proposed_by | join('·') }})_
 {% endfor %}
+{% if t.sources %}
+**근거:**
+{% for src in t.sources %}
+- [{{ src.title }}]({{ src.url }}) ({{ src.publisher }}, {{ src.date }})
+{% endfor %}
+{% endif %}
 {% endfor %}
 ---
 

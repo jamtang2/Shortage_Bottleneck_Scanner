@@ -161,7 +161,9 @@ CANDIDATES = {
     "candidates": [
         {"keyword": "HBM", "category": "반도체", "name": "SK하이닉스",
          "code": "000660", "market": "KOSPI", "proposed_by": ["claude", "gpt"],
-         "agreement_score": 2, "relation_reason": "HBM 수혜", "relevance": "high"},
+         "agreement_score": 2, "relation_reason": "HBM 수혜", "relevance": "high",
+         "sources": [{"title": "HBM 공급 부족", "url": "https://news.example/1",
+                      "date": "2026-06-10", "publisher": "한경"}]},
     ],
     "dropped": [{"keyword": "HBM", "model": "gpt", "proposed_name": "없는회사",
                  "reason": "KRX 미상장/모호"}],
@@ -198,6 +200,8 @@ def test_run_enrich_with_injected_market_and_dart():
     assert e.per_ttm == 8.0
     # M3 필드 승계
     assert e.proposed_by == ["claude", "gpt"] and e.agreement_score == 2
+    assert e.sources == [{"title": "HBM 공급 부족", "url": "https://news.example/1",
+                           "date": "2026-06-10", "publisher": "한경"}]
     # NF7: 기준일 분리
     assert e.data_asof["market_cap"] == "2026-06-19"
     assert e.data_asof["per_ttm"] == "2026-03-31"
@@ -219,4 +223,5 @@ def test_enriched_from_candidate_carries_m3_fields():
     e = EnrichedStock.from_candidate(CANDIDATES["candidates"][0])
     assert e.name == "SK하이닉스" and e.code == "000660"
     assert e.relation_reason == "HBM 수혜" and e.relevance == "high"
+    assert e.sources and e.sources[0]["url"] == "https://news.example/1"
     assert e.market_cap_eokwon is None  # 아직 결합 전
