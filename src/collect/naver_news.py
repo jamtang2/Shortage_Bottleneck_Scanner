@@ -1,6 +1,7 @@
 """M1: 네이버 뉴스 검색 API 수집.
 
-https://openapi.naver.com/v1/search/news.json
+NAVER API HUB(NCP) 경유: https://naverapihub.apigw.ntruss.com/search/v1/news
+(구 개발자센터 openapi.naver.com/v1/search/news.json 은 정책 변경으로 폐기)
 키워드별로 조회 → window_days 이내 기사만 필터 → HTML 태그/엔티티 정리.
 """
 from __future__ import annotations
@@ -19,7 +20,7 @@ from .models import Article
 
 logger = logging.getLogger(__name__)
 
-NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
+NAVER_NEWS_URL = "https://naverapihub.apigw.ntruss.com/search/v1/news"
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
@@ -75,8 +76,8 @@ def fetch_naver_news(
         return []
 
     headers = {
-        "X-Naver-Client-Id": client_id,
-        "X-Naver-Client-Secret": client_secret,
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret,
     }
     now = now or datetime.now(timezone.utc)
     out: List[Article] = []
